@@ -17,12 +17,18 @@ provider "azurerm" {
   features {}
 }
 
+#------------------------------------------------------------------------------
+# Creating resource group
+#------------------------------------------------------------------------------
 
 resource "azurerm_resource_group" "taskrg" {
   name     = "task-rg"
   location = "eastus"
 }
 
+#------------------------------------------------------------------------------
+# 1 VNET with 3 subnets 
+#------------------------------------------------------------------------------
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet1"
   location            = azurerm_resource_group.taskrg.location
@@ -30,12 +36,18 @@ resource "azurerm_virtual_network" "vnet" {
   address_space       = ["10.0.0.0/16"]
 }
 
+#------------------------------------------------------------------------------
+#subnet1 delegated to web app
+#------------------------------------------------------------------------------
+
 resource "azurerm_subnet" "subnet1" {
   address_prefixes                          = ["10.0.0.0/24"]
   name                                      = "subnet1"
   resource_group_name                       = azurerm_resource_group.taskrg.name
   virtual_network_name                      = azurerm_virtual_network.vnet.name
   private_endpoint_network_policies_enabled = true
+
+  service_endpoints = ["Microsoft.KeyVault"]
 
   delegation {
     name = "delegation"
@@ -51,13 +63,21 @@ resource "azurerm_subnet" "subnet1" {
 
 }
 
+#------------------------------------------------------------------------------
+#subnet2 
+#------------------------------------------------------------------------------
 resource "azurerm_subnet" "subnet2" {
   address_prefixes                          = ["10.0.1.0/24"]
   name                                      = "subnet2"
   resource_group_name                       = azurerm_resource_group.taskrg.name
   virtual_network_name                      = azurerm_virtual_network.vnet.name
   private_endpoint_network_policies_enabled = true
+  service_endpoints                         = ["Microsoft.KeyVault"]
 }
+
+#------------------------------------------------------------------------------
+#subnet3
+#------------------------------------------------------------------------------
 
 resource "azurerm_subnet" "subnet3" {
   address_prefixes                          = ["10.0.2.0/24"]
@@ -65,34 +85,56 @@ resource "azurerm_subnet" "subnet3" {
   resource_group_name                       = azurerm_resource_group.taskrg.name
   virtual_network_name                      = azurerm_virtual_network.vnet.name
   private_endpoint_network_policies_enabled = true
+  service_endpoints                         = ["Microsoft.KeyVault"]
 }
 
-data "azurerm_subscription" "current" {}
-
+#------------------------------------------------------------------------------
+#Creating Service Plan (App Service Plan)
+#------------------------------------------------------------------------------
 resource "azurerm_service_plan" "serviceplan" {
   location            = azurerm_resource_group.taskrg.location
   name                = "dendevopsgrowth_sp"
   os_type             = "Linux"
   sku_name            = "B1"
   resource_group_name = azurerm_resource_group.taskrg.name
-  
+
 }
 
+#------------------------------------------------------------------------------
+#Creating pp Service - Integrate with Vnet, Enable System Managed Identity 
+#------------------------------------------------------------------------------
+
 resource "azurerm_linux_web_app" "webapp" {
-  name                      = "dendevopsgrowth"
-  resource_group_name       = azurerm_resource_group.taskrg.name
-  location                  = azurerm_resource_group.taskrg.location
-  service_plan_id           = azurerm_service_plan.serviceplan.id
+  name                = "dendevopsgrowth"
+  resource_group_name = azurerm_resource_group.taskrg.name
+  location            = azurerm_resource_group.taskrg.location
+  service_plan_id     = azurerm_service_plan.serviceplan.id
+  # Integrate with Vnet
   virtual_network_subnet_id = azurerm_subnet.subnet1.id
-  
+
+  # Enable System Managed Identity
   identity {
     type = "SystemAssigned"
   }
-  site_config {}
+  site_config {
+    always_on = true
+  }
   app_settings = {
+    # Linking App Insights Instrumentation
     APPINSIGHTS_INSTRUMENTATIONKEY = "${azurerm_application_insights.appins.instrumentation_key}"
+    # Integrating ACR
+    DOCKER_REGISTRY_SERVER_URL      = azurerm_container_registry.acr.login_server
+    DOCKER_REGISTRY_SERVER_USERNAME = azurerm_container_registry.acr.admin_username
+    DOCKER_REGISTRY_SERVER_PASSWORD = azurerm_container_registry.acr.admin_password
+    # Linking file share 
+    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = azurerm_storage_account.storage_account_1.primary_blob_connection_string
+    WEBSITE_CONTENTSHARE                     = azurerm_storage_share.storageshare.name
   }
 }
+
+#------------------------------------------------------------------------------
+# Creating App Insights Linked to App Service
+#------------------------------------------------------------------------------
 
 resource "azurerm_application_insights" "appins" {
   name                = "web_app_insights"
@@ -101,14 +143,9 @@ resource "azurerm_application_insights" "appins" {
   resource_group_name = azurerm_resource_group.taskrg.name
 }
 
-output "instrumentation_key" {
-  value = azurerm_application_insights.appins.instrumentation_key
-  sensitive = true
-}
-
-output "app_id" {
-  value = azurerm_application_insights.appins.app_id
-}
+#------------------------------------------------------------------------------
+# Creating Storage account - Configured Private Endpoint with VNET and link Fileshare to App Service
+#------------------------------------------------------------------------------
 
 resource "azurerm_private_dns_zone" "dns-zone" {
   name                = "privatelink.file.core.windows.net"
@@ -166,25 +203,31 @@ resource "azurerm_private_dns_a_record" "dns_a" {
 }
 
 
+#------------------------------------------------------------------------------
+# MS SQL DB - Private Endpoint needs to be configured
+#------------------------------------------------------------------------------
+
 resource "azurerm_mssql_server" "mssqlsrv" {
-  name = "dendevopsgrowthmssqlsrv"
-  location = azurerm_resource_group.taskrg.location
-  resource_group_name = azurerm_resource_group.taskrg.name
-  version = "12.0"
-  administrator_login = var.mssql_admin_login
+  name                         = "dendevopsgrowthmssqlsrv"
+  location                     = azurerm_resource_group.taskrg.location
+  resource_group_name          = azurerm_resource_group.taskrg.name
+  version                      = "12.0"
+  administrator_login          = var.mssql_admin_login
   administrator_login_password = var.mssql_admin_pass
 }
 
+# Creating DB
 resource "azurerm_mssql_database" "mssqldb" {
-  name = "dendevopsgrowthmssqldb"
+  name      = "dendevopsgrowthmssqldb"
   server_id = azurerm_mssql_server.mssqlsrv.id
 }
 
+# Configuring PE
 resource "azurerm_private_endpoint" "dbpep" {
-  name = "dendevopsgrowthdbpep"
-  location = azurerm_resource_group.taskrg.location
+  name                = "dendevopsgrowthdbpep"
+  location            = azurerm_resource_group.taskrg.location
   resource_group_name = azurerm_resource_group.taskrg.name
-  subnet_id = azurerm_subnet.subnet3.id
+  subnet_id           = azurerm_subnet.subnet3.id
 
   private_service_connection {
     name                           = "dendevopsgrowthdbpep_psc"
@@ -220,3 +263,72 @@ resource "azurerm_private_dns_a_record" "arecord1" {
   ttl                 = 300
   records             = [data.azurerm_private_endpoint_connection.private-ip2.private_service_connection.0.private_ip_address]
 }
+
+#------------------------------------------------------------------------------
+# Creating Key Vault Integrate with VNET and addded permissions to App Service Identity
+#------------------------------------------------------------------------------
+
+data "azurerm_client_config" "current" {}
+
+
+resource "azurerm_key_vault" "keyvault" {
+  name                = "dendevopskeyvault"
+  location            = azurerm_resource_group.taskrg.location
+  resource_group_name = azurerm_resource_group.taskrg.name
+  sku_name            = "standard"
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    key_permissions = [
+      "Get",
+    ]
+
+    secret_permissions = [
+      "Get",
+    ]
+
+    storage_permissions = [
+      "Get",
+    ]
+  }
+
+  # Integration with VNET
+  network_acls {
+    default_action             = "Deny"
+    bypass                     = "AzureServices"
+    virtual_network_subnet_ids = [azurerm_subnet.subnet1.id, azurerm_subnet.subnet2.id, azurerm_subnet.subnet3.id]
+  }
+}
+
+
+resource "azurerm_key_vault_access_policy" "kvap" {
+  key_vault_id = azurerm_key_vault.keyvault.id
+  object_id    = azurerm_linux_web_app.webapp.identity.0.principal_id
+  tenant_id    = azurerm_linux_web_app.webapp.identity.0.tenant_id
+
+  key_permissions = [
+    "Get",
+  ]
+
+  secret_permissions = [
+    "Get",
+  ]
+}
+
+#------------------------------------------------------------------------------
+# ACR - Azure Container Registry, grant access to App Service
+#------------------------------------------------------------------------------
+
+resource "azurerm_container_registry" "acr" {
+  name                = "dendevopsgrowthacr"
+  resource_group_name = azurerm_resource_group.taskrg.name
+  location            = azurerm_resource_group.taskrg.location
+  sku                 = "Standard"
+  admin_enabled       = true
+
+}
+
+
