@@ -4,3 +4,4 @@ variable "tfstate_rg" {}
 variable "tfstate_sa_name" {}
 variable "tfstate_container_name" {}
 variable "tfstate_key" {}
+variable "sas_token" {}
