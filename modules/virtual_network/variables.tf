@@ -8,12 +8,8 @@ variable "location" {
   type        = string
 }
 
-variable "address_space" {
-  description = "Address space for the virtual network."
-  type        = list(string)
-}
 
-variable "subnet_count" {
-  description = "Number of subnets to create in the virtual network."
-  type        = number
+variable "resource_group_name" {
+ description = "Resource group name"
+ type        = string
 }
