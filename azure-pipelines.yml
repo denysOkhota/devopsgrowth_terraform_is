@@ -75,3 +75,42 @@ stages:
         command: 'plan'
         allowTelemetryCollection: true
         publishPlanResults: 'tfplan'
+
+- stage: BuildAndDeployPROD
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+  displayName: 'Build and Deploy PROD'
+  jobs:
+  - job: TerraformInitAndValidate
+    displayName: 'Terraform Install, Init, and Validate'
+    steps:
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'init'
+        backendType: 'azurerm'
+        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        backendAzureRmResourceGroupName: 'tfstate'
+        backendAzureRmStorageAccountName: 'dentfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'terraform.tfstate'
+        allowTelemetryCollection: true
+    - task: TerraformCLI@0
+      inputs:
+        command: 'workspace'
+        allowTelemetryCollection: true
+        workspaceName: 'prod'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'validate'
+        allowTelemetryCollection: true
+    - task: TerraformCLI@0
+      inputs:
+        command: 'apply'
+        environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        secureVarsFile: 'terraform.tfvars'
+        commandOptions: '--auto-approve'
+        allowTelemetryCollection: true
