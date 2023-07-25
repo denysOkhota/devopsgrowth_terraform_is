@@ -5,6 +5,39 @@ pool:
   vmImage: ubuntu-latest
 
 stages:
+- stage: BuildonPR
+  displayName: 'Build on PR'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  jobs:
+  - job: TerraformInitAndPlan
+    displayName: 'Terraform Init and Plan'
+    steps:
+    - task: TerraformCLI@0
+      inputs:
+        command: 'workspace'
+        allowTelemetryCollection: true
+        workspaceName: 'dev'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'init'
+        backendType: 'azurerm'
+        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        backendAzureRmResourceGroupName: 'tfstate'
+        backendAzureRmStorageAccountName: 'dentfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'terraform.tfstate'
+        allowTelemetryCollection: true
+    - task: TerraformCLI@0
+      inputs:
+        command: 'validate'
+        allowTelemetryCollection: true
+    - task: TerraformCLI@0
+      inputs:
+        command: 'plan'
+        allowTelemetryCollection: true
+        publishPlanResults: 'tfplan'
+
 - stage: BuildAndDeployDEV
   displayName: 'Build and Deploy DEV'
   jobs:
@@ -42,39 +75,6 @@ stages:
         secureVarsFile: 'terraform.tfvars'
         commandOptions: '--auto-approve'
         allowTelemetryCollection: true
-
-- stage: BuildonPR
-  displayName: 'Build on PR'
-  condition: eq(variables['Build.Reason'], 'PullRequest')
-  jobs:
-  - job: TerraformInitAndPlan
-    displayName: 'Terraform Init and Plan'
-    steps:
-    - task: TerraformCLI@0
-      inputs:
-        command: 'workspace'
-        allowTelemetryCollection: true
-        workspaceName: 'dev'
-    - task: TerraformCLI@0
-      inputs:
-        command: 'init'
-        backendType: 'azurerm'
-        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
-        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
-        backendAzureRmResourceGroupName: 'tfstate'
-        backendAzureRmStorageAccountName: 'dentfstate'
-        backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: 'terraform.tfstate'
-        allowTelemetryCollection: true
-    - task: TerraformCLI@0
-      inputs:
-        command: 'validate'
-        allowTelemetryCollection: true
-    - task: TerraformCLI@0
-      inputs:
-        command: 'plan'
-        allowTelemetryCollection: true
-        publishPlanResults: 'tfplan'
 
 - stage: BuildAndDeployPROD 
   condition: eq(variables['Build.Reason'], 'Manual')
