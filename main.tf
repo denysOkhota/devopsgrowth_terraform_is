@@ -279,14 +279,14 @@ data "azurerm_client_config" "current" {}
 
 module "keyvault" {
   source = "./modules/key_vault"
-  name                = "${terraform.workspace}dendevopsgrowthkeyvault"
+  name                = "dendevopsgrowthkeyvault"
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
   sku_name            = "standard"
   tenant_id           = data.azurerm_client_config.current.tenant_id
   object_id = data.azurerm_client_config.current.object_id
   virtual_network_subnet_ids = [azurerm_subnet.subnet1.id, azurerm_subnet.subnet2.id, azurerm_subnet.subnet3.id]
-  
+
 }
 
 
