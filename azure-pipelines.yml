@@ -38,8 +38,9 @@ stages:
         command: 'plan'
         environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
         providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        runAzLogin: true
         secureVarsFile: 'terraform.tfvars'
-
+        allowTelemetryCollection: true
 
 - stage: BuildAndDeployDEV
   displayName: 'Build and Deploy DEV'
