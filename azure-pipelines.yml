@@ -16,11 +16,6 @@ stages:
         terraformVersion: 'latest'
     - task: TerraformCLI@0
       inputs:
-        command: 'workspace'
-        allowTelemetryCollection: true
-        workspaceName: 'dev'
-    - task: TerraformCLI@0
-      inputs:
         command: 'init'
         backendType: 'azurerm'
         backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
@@ -30,6 +25,11 @@ stages:
         backendAzureRmContainerName: 'tfstate'
         backendAzureRmKey: 'terraform.tfstate'
         allowTelemetryCollection: true
+    - task: TerraformCLI@0
+      inputs:
+        command: 'workspace'
+        allowTelemetryCollection: true
+        workspaceName: 'dev'
     - task: TerraformCLI@0
       inputs:
         command: 'validate'
