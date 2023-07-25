@@ -1,6 +1,3 @@
-trigger:
-- main
-
 pr:
   branches:
     include:
@@ -10,6 +7,39 @@ pool:
   vmImage: ubuntu-latest
 
 stages:
+- stage: BuildonPR
+  displayName: 'Build on PR'
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - job: TerraformInitAndPlan
+    displayName: 'Terraform Init and Plan'
+    steps:
+    - task: TerraformCLI@0
+      inputs:
+        command: 'init'
+        backendType: 'azurerm'
+        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        backendAzureRmResourceGroupName: 'tfstate'
+        backendAzureRmStorageAccountName: 'dentfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'terraform.tfstate'
+        
+    - task: TerraformCLI@0
+      inputs:
+        command: 'workspace'
+        workspaceName: 'dev'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'validate'
+        
+    - task: TerraformCLI@0
+      inputs:
+        command: 'plan'
+        publishPlanResults: 'tfplan'
+        secureVarsFile: 'terraform.tfvars'
+
+
 - stage: BuildAndDeployDEV
   displayName: 'Build and Deploy DEV'
   jobs:
@@ -29,16 +59,16 @@ stages:
         backendAzureRmStorageAccountName: 'dentfstate'
         backendAzureRmContainerName: 'tfstate'
         backendAzureRmKey: 'terraform.tfstate'
-        allowTelemetryCollection: true
+        
     - task: TerraformCLI@0
       inputs:
         command: 'workspace'
-        allowTelemetryCollection: true
+        
         workspaceName: 'dev'
     - task: TerraformCLI@0
       inputs:
         command: 'validate'
-        allowTelemetryCollection: true
+        
     - task: TerraformCLI@0
       inputs:
         command: 'apply'
@@ -46,45 +76,23 @@ stages:
         providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
         secureVarsFile: 'terraform.tfvars'
         commandOptions: '--auto-approve'
-        allowTelemetryCollection: true
+        
 
-- stage: BuildonPR
-  displayName: 'Build on PR'
-  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
-  jobs:
-  - job: TerraformInitAndPlan
-    displayName: 'Terraform Init and Plan'
-    steps:
-    - task: TerraformCLI@0
-      inputs:
-        command: 'workspace'
-        allowTelemetryCollection: true
-        workspaceName: 'dev'
-    - task: TerraformCLI@0
-      inputs:
-        command: 'init'
-        backendType: 'azurerm'
-        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
-        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
-        backendAzureRmResourceGroupName: 'tfstate'
-        backendAzureRmStorageAccountName: 'dentfstate'
-        backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: 'terraform.tfstate'
-        allowTelemetryCollection: true
-    - task: TerraformCLI@0
-      inputs:
-        command: 'validate'
-        allowTelemetryCollection: true
-    - task: TerraformCLI@0
-      inputs:
-        command: 'plan'
-        allowTelemetryCollection: true
-        publishPlanResults: 'tfplan'
-
-- stage: BuildAndDeployPROD
-  condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+- stage: BuildAndDeployPROD 
   displayName: 'Build and Deploy PROD'
   jobs:
+  - job: waitForValidation
+    displayName: Wait for external validation
+    pool: server
+    timeoutInMinutes: 4320
+    steps:
+    - task: ManualValidation@0
+      timeoutInMinutes: 1440 
+      inputs:
+        notifyUsers: |
+          qwerty165343@gmail.com
+        instructions: 'Please validate the build configuration and resume'
+        onTimeout: 'resume'
   - job: TerraformInitAndValidate
     displayName: 'Terraform Install, Init, and Validate'
     steps:
@@ -101,16 +109,16 @@ stages:
         backendAzureRmStorageAccountName: 'dentfstate'
         backendAzureRmContainerName: 'tfstate'
         backendAzureRmKey: 'terraform.tfstate'
-        allowTelemetryCollection: true
+        
     - task: TerraformCLI@0
       inputs:
         command: 'workspace'
-        allowTelemetryCollection: true
+        
         workspaceName: 'prod'
     - task: TerraformCLI@0
       inputs:
         command: 'validate'
-        allowTelemetryCollection: true
+        
     - task: TerraformCLI@0
       inputs:
         command: 'apply'
@@ -118,4 +126,4 @@ stages:
         providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
         secureVarsFile: 'terraform.tfvars'
         commandOptions: '--auto-approve'
-        allowTelemetryCollection: true
+        
