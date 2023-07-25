@@ -39,6 +39,7 @@ stages:
         command: 'apply'
         environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
         providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        secureVarsFile: 'terraform.tfvars'
         commandOptions: '--auto-approve'
         allowTelemetryCollection: true
 
