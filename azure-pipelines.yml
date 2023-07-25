@@ -5,7 +5,7 @@ pool:
   vmImage: ubuntu-latest
 
 stages:
-  - stage: "Buil&Deploy_DEV"
+  - stage: "Buil&DeployDEV"
     jobs:
     - job: 'TerraformInitAndValidate'
       displayName: "Terraform install, Init and Validate" 
@@ -40,7 +40,7 @@ stages:
           providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
           commandOptions: '--auto-approve'
           allowTelemetryCollection: true
-  - stage: "Build_onPR"
+  - stage: "BuildonPR"
     condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
     jobs:
     - job: 'TerraformInitAndValidate'
