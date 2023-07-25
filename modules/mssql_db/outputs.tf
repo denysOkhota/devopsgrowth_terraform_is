@@ -1,4 +1,4 @@
 
-output "mssql_database_id" {
+output "id" {
   value = azurerm_mssql_database.mssql_database.id
 }

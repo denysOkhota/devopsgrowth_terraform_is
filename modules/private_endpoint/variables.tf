@@ -24,6 +24,9 @@ variable "private_connection_resource_id" {
 }
 
 variable "private_service_connection" {
-  description = "Configuration for the private service connection."
-  type        = map(string)
+  type = list(object({
+    name                    = string
+    is_manual_connection    = bool
+    subresource_names       = list(string)
+  }))
 }

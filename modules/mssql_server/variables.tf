@@ -13,11 +13,6 @@ variable "location" {
   type        = string
 }
 
-variable "version" {
-  description = "Version of the MSSQL server."
-  type        = string
-}
-
 variable "administrator_login" {
   description = "Administrator login for the MSSQL server."
   type        = string
