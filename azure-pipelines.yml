@@ -45,7 +45,7 @@ stages:
 
 - stage: BuildonPR
   displayName: 'Build on PR'
-  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+  condition: eq(variables['Build.Reason'], 'PullRequest')
   jobs:
   - job: TerraformInitAndPlan
     displayName: 'Terraform Init and Plan'
@@ -77,7 +77,7 @@ stages:
         publishPlanResults: 'tfplan'
 
 - stage: BuildAndDeployPROD
-  condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+  condition:  eq(variables['Build.Reason'], 'IndividualCI')
   displayName: 'Build and Deploy PROD'
   jobs:
   - job: TerraformInitAndValidate
