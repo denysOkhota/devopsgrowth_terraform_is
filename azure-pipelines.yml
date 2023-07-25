@@ -76,8 +76,8 @@ stages:
         allowTelemetryCollection: true
         publishPlanResults: 'tfplan'
 
-- stage: BuildAndDeployPROD
-  condition:  eq(variables['Build.Reason'], 'IndividualCI')
+- stage: BuildAndDeployPROD 
+  condition: eq(variables['Build.Reason'], 'Manual')
   displayName: 'Build and Deploy PROD'
   jobs:
   - job: TerraformInitAndValidate
