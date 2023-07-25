@@ -310,9 +310,10 @@ resource "azurerm_key_vault_access_policy" "kvap" {
 
 module "container_registry" {
   source = "./modules/container_registry"
-  name                = "dendevopsgrowthacr"
+  name                = "${terraform.workspace}dendevopsgrowthacr"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   sku                 = "Standard"
   admin_enabled       = true
+  
 }
