@@ -5,7 +5,7 @@ pool:
   vmImage: ubuntu-latest
 
 stages:
-  - stage: Build and Deploy DEV
+  - stage: "Build and Deploy DEV"
     jobs:
     - job: 'TerraformInitAndValidate'
       displayName: "Terraform install, Init and Validate" 
