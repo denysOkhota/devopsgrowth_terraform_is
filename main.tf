@@ -279,7 +279,7 @@ data "azurerm_client_config" "current" {}
 
 module "keyvault" {
   source = "./modules/key_vault"
-  name                = "dendevopsgrowthkeyvault"
+  name                = "${terraform.workspace}dendevopskeyvault"
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
   sku_name            = "standard"
