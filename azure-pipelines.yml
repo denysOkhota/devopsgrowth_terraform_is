@@ -9,97 +9,96 @@ pool:
   vmImage: ubuntu-latest
 
 stages:
-- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-  - stage: BuildAndDeployDEV
-    displayName: 'Build and Deploy DEV'
-    condition: or(eq(variables['Build.Reason'], 'IndividualCI'),eq(variables['Build.Reason'], 'Manual'))
-    jobs:
-    - job: TerraformInitAndValidate
-      displayName: 'Terraform Install, Init, and Validate'
-      steps:
-      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@1
-        inputs:
-          terraformVersion: 'latest'
-      - task: TerraformCLI@0
-        inputs:
-          command: 'init'
-          backendType: 'azurerm'
-          backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
-          backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
-          backendAzureRmResourceGroupName: 'tfstate'
-          backendAzureRmStorageAccountName: 'dentfstate'
-          backendAzureRmContainerName: 'tfstate'
-          backendAzureRmKey: 'terraform.tfstate'
-          
-      - task: TerraformCLI@0
-        inputs:
-          command: 'workspace'
-          
-          workspaceName: 'dev'
-      - task: TerraformCLI@0
-        inputs:
-          command: 'validate'
-          
-      - task: TerraformCLI@0
-        inputs:
-          command: 'apply'
-          environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
-          providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
-          secureVarsFile: 'terraform.tfvars'
-          commandOptions: '--auto-approve'
-          
+- stage: BuildAndDeployDEV
+  displayName: 'Build and Deploy DEV'
+  condition: contains(variables['Build.SourceBranch'],'refs/heads/master')
+  jobs:
+  - job: TerraformInitAndValidate
+    displayName: 'Terraform Install, Init, and Validate'
+    steps:
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'init'
+        backendType: 'azurerm'
+        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        backendAzureRmResourceGroupName: 'tfstate'
+        backendAzureRmStorageAccountName: 'dentfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'terraform.tfstate'
+        
+    - task: TerraformCLI@0
+      inputs:
+        command: 'workspace'
+        
+        workspaceName: 'dev'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'validate'
+        
+    - task: TerraformCLI@0
+      inputs:
+        command: 'apply'
+        environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        secureVarsFile: 'terraform.tfvars'
+        commandOptions: '--auto-approve'
+        
 
-  - stage: BuildAndDeployPROD 
-    displayName: 'Build and Deploy PROD'
-    condition: and(succeeded(),or(eq(variables['Build.Reason'], 'IndividualCI'),eq(variables['Build.Reason'], 'Manual')))
-    jobs:
-    - job: waitForValidation
-      displayName: Wait for external validation
-      pool: server
-      timeoutInMinutes: 4320
-      steps:
-      - task: ManualValidation@0
-        timeoutInMinutes: 1440 
-        inputs:
-          notifyUsers: |
-            qwerty165343@gmail.com
-          instructions: 'Please validate the build configuration and resume'
-          onTimeout: 'resume'
-    - job: TerraformInitAndValidate
-      displayName: 'Terraform Install, Init, and Validate'
-      dependsOn: waitForValidation
-      condition: succeeded()
-      steps:
-      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@1
-        inputs:
-          terraformVersion: 'latest'
-      - task: TerraformCLI@0
-        inputs:
-          command: 'init'
-          backendType: 'azurerm'
-          backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
-          backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
-          backendAzureRmResourceGroupName: 'tfstate'
-          backendAzureRmStorageAccountName: 'dentfstate'
-          backendAzureRmContainerName: 'tfstate'
-          backendAzureRmKey: 'terraform.tfstate'
-          
-      - task: TerraformCLI@0
-        inputs:
-          command: 'workspace'
-          
-          workspaceName: 'prod'
-      - task: TerraformCLI@0
-        inputs:
-          command: 'validate'
-          
-      - task: TerraformCLI@0
-        inputs:
-          command: 'apply'
-          environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
-          providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
-          secureVarsFile: 'terraform.tfvars'
-          commandOptions: '--auto-approve'
+- stage: BuildAndDeployPROD 
+  displayName: 'Build and Deploy PROD'
+  condition: and(succeeded(), contains(variables['Build.SourceBranch'],'refs/heads/master'))
+  jobs:
+  - job: waitForValidation
+    displayName: Wait for external validation
+    pool: server
+    timeoutInMinutes: 4320
+    steps:
+    - task: ManualValidation@0
+      timeoutInMinutes: 1440 
+      inputs:
+        notifyUsers: |
+          qwerty165343@gmail.com
+        instructions: 'Please validate the build configuration and resume'
+        onTimeout: 'resume'
+  - job: TerraformInitAndValidate
+    displayName: 'Terraform Install, Init, and Validate'
+    dependsOn: waitForValidation
+    condition: succeeded()
+    steps:
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'init'
+        backendType: 'azurerm'
+        backendServiceArm: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        backendAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        backendAzureRmResourceGroupName: 'tfstate'
+        backendAzureRmStorageAccountName: 'dentfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'terraform.tfstate'
+        
+    - task: TerraformCLI@0
+      inputs:
+        command: 'workspace'
+        
+        workspaceName: 'prod'
+    - task: TerraformCLI@0
+      inputs:
+        command: 'validate'
+        
+    - task: TerraformCLI@0
+      inputs:
+        command: 'apply'
+        environmentServiceName: 'Azure subscription 1(1)(f4210fd4-9a8e-484e-b3ab-bf706abb3785)'
+        providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
+        secureVarsFile: 'terraform.tfvars'
+        commandOptions: '--auto-approve'
 - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
   - stage: BuildonPR
     displayName: 'Build on PR'
