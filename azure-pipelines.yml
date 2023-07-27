@@ -1,9 +1,5 @@
 trigger:
   - main
-pr:
-  branches:
-    include:
-      - main
 
 pool:
   vmImage: ubuntu-latest
@@ -99,6 +95,11 @@ stages:
         providerAzureRmSubscriptionId: 'f4210fd4-9a8e-484e-b3ab-bf706abb3785'
         secureVarsFile: 'terraform.tfvars'
         commandOptions: '--auto-approve'
+
+pr:
+  branches:
+    include:
+      - main
 
 - stage: BuildonPR
   displayName: 'Build on PR'
