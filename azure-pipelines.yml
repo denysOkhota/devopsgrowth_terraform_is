@@ -48,7 +48,7 @@ stages:
 
 - stage: BuildAndDeployPROD 
   displayName: 'Build and Deploy PROD'
-  condition: and(succeeded(),eq(variables['Build.Reason'], 'IndividualCI'))
+  condition: and(succeeded(),or(eq(variables['Build.Reason'], 'IndividualCI'),eq(variables['Build.Reason'], 'Manual')))
   jobs:
   - job: waitForValidation
     displayName: Wait for external validation
