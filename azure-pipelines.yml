@@ -64,6 +64,8 @@ stages:
         onTimeout: 'resume'
   - job: TerraformInitAndValidate
     displayName: 'Terraform Install, Init, and Validate'
+    dependsOn: npmAudit
+    condition: succeeded()
     steps:
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@1
       inputs:
