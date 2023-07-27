@@ -99,6 +99,7 @@ stages:
 - stage: BuildonPR
   displayName: 'Build on PR'
   condition: eq(variables['Build.Reason'], 'PullRequest')
+  dependsOn:
   jobs:
   - job: TerraformInitAndPlan
     displayName: 'Terraform Init and Plan'
